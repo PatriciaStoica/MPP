@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { Task } from './Task.js';
 
 function App() {
+  const [sortBy, setSortBy] = useState(null);
+  const [sortOrder, setSortOrder] = useState('ASC');
   const [todoList, setTodoList] = useState([]);
   const [newTask, setNewTask] = useState("");
   const [editMode, setEditMode] = useState(null);
@@ -11,16 +13,20 @@ function App() {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [sortBy, sortOrder]);
 
   const handleChange = (event) => {
     setNewTask(event.target.value);
   }
 
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+  };
+
   // fetch data from server
   const fetchTasks = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/tasks');
+      const response = await fetch(`http://localhost:8080/api/taskstasks${sortBy ? `?sortBy=${sortBy}&sortOrder=${sortOrder}` : ''}`);
       if(!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -145,6 +151,9 @@ function App() {
         </button>
       </div>
       <div className="list">
+          <button onClick={toggleSortOrder}       className="toggle-sort-button">
+            Toggle Sort Order
+          </button>
         {
           todoList.map((task) => (
             <Task
