@@ -24,9 +24,9 @@ public class TaskController {
         this.taskService = taskService;
     }
 
-    @GetMapping
+    /*@GetMapping
     public List<Task> getAllTasks() {
-        List<Task> tasks = taskService.getAllTasks();
+        List<Task> tasks = taskService.getAllTasks(@RequestParam(required = false) String sortBy, @RequestParam(required = false, defaultValue = "ASC") String sortOrder);
         Map<Long, Task> taskMap = new HashMap<>();
 
         for (Task task : tasks) {
@@ -37,7 +37,27 @@ public class TaskController {
 
         List<Task> uniqueTasks = new ArrayList<>(taskMap.values());
         return uniqueTasks;
+    }*/
+
+    @GetMapping
+    public List<Task> getAllTasks(@RequestParam(required = false) String sortBy, @RequestParam(required = false, defaultValue = "ASC") String sortOrder) {
+        if (sortBy != null) {
+            return taskService.getAllTasks(sortBy, sortOrder);
+        } else {
+            List<Task> tasks = taskService.getAllTasks();
+            Map<Long, Task> taskMap = new HashMap<>();
+
+            for (Task task : tasks) {
+                if (!taskMap.containsKey(task.getId())) {
+                    taskMap.put(task.getId(), task);
+                }
+            }
+
+            List<Task> uniqueTasks = new ArrayList<>(taskMap.values());
+            return uniqueTasks;
+        }
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<Task> getTaskById(@PathVariable long id) {

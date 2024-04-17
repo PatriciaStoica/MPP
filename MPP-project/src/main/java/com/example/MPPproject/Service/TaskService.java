@@ -3,6 +3,7 @@ package com.example.MPPproject.Service;
 import com.example.MPPproject.Model.Task;
 import com.example.MPPproject.Repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +22,11 @@ public class TaskService {
         return taskRepository.findAll();
     }
 
+    public List<Task> getAllTasks(String sortBy, String sortOrder) {
+        Sort.Direction direction = sortOrder.equalsIgnoreCase("DESC") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return taskRepository.findAll(Sort.by(direction, sortBy));
+    }
+
     public Optional<Task> getTaskById(long id) {
         return taskRepository.findById(id);
     }
@@ -30,9 +36,12 @@ public class TaskService {
     }
 
     public boolean deleteTask(long id) {
-        return taskRepository.deleteById(id);
+        Optional<Task> taskOptional = taskRepository.findById(id);
+        if (taskOptional.isPresent()) {
+            taskRepository.deleteById(id);
+            return true;
+        } else {
+            return false;
+        }
     }
 }
-
-
-
