@@ -30,9 +30,12 @@ public class TaskService {
     }
 
     public boolean deleteTask(long id) {
-        return taskRepository.deleteById(id);
+        Optional<Task> taskOptional = taskRepository.findById(id);
+        if (taskOptional.isPresent()) {
+            taskRepository.deleteById(id);
+            return true;
+        } else {
+            return false;
+        }
     }
 }
-
-
-
