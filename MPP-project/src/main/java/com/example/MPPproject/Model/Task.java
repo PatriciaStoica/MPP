@@ -4,18 +4,19 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+@Entity
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
     private long id;
+
     private String taskName;
     private boolean completed;
 
     public Task() {
     }
 
-    public Task(String taskName, boolean completed) {
+    public Task(String taskName, boolean completed){
         this.taskName = taskName;
         this.completed = completed;
     }

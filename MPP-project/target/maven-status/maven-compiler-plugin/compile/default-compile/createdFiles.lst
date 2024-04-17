@@ -1,0 +1,7 @@
+com/example/MPPproject/MppProjectApplication.class
+com/example/MPPproject/Controller/TaskController.class
+com/example/MPPproject/config/WebSocketConfig.class
+com/example/MPPproject/Model/Task.class
+com/example/MPPproject/Service/TaskService.class
+com/example/MPPproject/Repository/TaskRepository.class
+com/example/MPPproject/cronjob/WebSocketConfigCronjob.class
