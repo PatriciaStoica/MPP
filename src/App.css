@@ -50,6 +50,21 @@
   background-color: #555;
 }
 
+/* Toggle Sort Order Button */
+.toggle-sort-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.toggle-sort-button:hover {
+  background-color: #388E3C;
+}
+
 /* Add Task Section */
 .addTask {
   margin-top: 30px;
