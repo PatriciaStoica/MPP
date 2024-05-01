@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export const Task = (props) => {
-  const [editedTaskName, setEditedTaskName] = useState(props.taskName);
+  const [editedTaskName, setEditedTaskName] = useState(props.task.taskName);
 
+  useEffect(() => {
+    setEditedTaskName(props.task.taskName);
+  }, [props.task.taskName]);
+
+  const isTemporaryId = (id) => {
+    return typeof id === 'string' && id.startsWith('temp_');
+  }
   const handleEditChange = (event) => {
     setEditedTaskName(event.target.value);
   };
 
   const handleEditSubmit = () => {
-    props.updateTaskName(props.task.id, editedTaskName);
+    if (isTemporaryId(props.task.id)) {
+      props.updateTemporaryTaskName(props.task.id, editedTaskName);
+    } else {
+      props.updateTaskName(props.task.id, editedTaskName);
+    }
+
+    props.handleEditTask(null);
   };
 
   return (
@@ -25,7 +38,7 @@ export const Task = (props) => {
       {props.editMode ? (
         <button className="editButton" onClick={handleEditSubmit}>Save</button>
       ) : (
-        <button className="editButton" onClick={() => props.handleEditTask(props.task.id)}>Edit</button>
+        <button className="editButton" onClick={() => { console.log('Edit button clicked for task id:', props.task); props.handleEditTask(props.task.id)}}>Edit</button>
       )}
       <button className="deleteButton" onClick={() => props.deleteTask(props.task.id)}>X</button>
     </div>
