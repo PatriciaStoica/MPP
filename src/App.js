@@ -111,7 +111,8 @@ function App() {
   const isInternetConnected = () => {
     return navigator.onLine;
   };
-
+  
+  /*
   useEffect(() => {
     const syncOfflineTasks = async () => {
       const isServerUp = await isServerReachable();
@@ -149,7 +150,7 @@ function App() {
     };
 
     syncOfflineTasks();
-  }, []);
+  }, []);*/
 
   // delete data and update database
   const deleteTask = async (id) => {
