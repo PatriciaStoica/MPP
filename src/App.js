@@ -28,6 +28,7 @@ function App() {
 
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    setSortBy('taskName');
   };
 
   // fetch data from server
@@ -52,7 +53,7 @@ function App() {
   };
 
   // add data and send data to server
-  const addTask = async () => {
+  /*const addTask = async () => {
     if (newTask.trim() === '') return;
 
     try {
@@ -97,11 +98,49 @@ function App() {
 
       setErrorMessage('Failed to add task. Please try again.');
     }
+  };*/
+
+  const addTask = async () => {
+    if (newTask.trim() === '') return;
+  
+    try {
+      const response = await fetch('http://localhost:8080/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskName: newTask,
+          completed: false
+        })
+      });
+  
+      if (response.status === 201) {
+        const newTaskWithId = await response.json();
+        setTodoList([...todoList, newTaskWithId]);
+        setMessage('Task added successfully.');
+      } else {
+        setErrorMessage('Failed to add task. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      const temporaryId = generateTemporaryId();
+      const taskToAdd = { taskName: newTask, completed: false, id: temporaryId };
+  
+      setTodoList([...todoList, taskToAdd]);
+  
+      const storedTasks = localStorage.getItem('offlineTasks');
+      const tasks = storedTasks ? JSON.parse(storedTasks) : [];
+      localStorage.setItem('offlineTasks', JSON.stringify([...tasks, taskToAdd]));
+  
+      setErrorMessage('Failed to add task. Please try again.');
+    }
   };
+  
 
   const isServerReachable = async () => {
     try {
-      const response = await fetch('http://localhost:8080');
+      const response = await fetch('http://localhost:8080/api/tasks');
       return response.ok;
     } catch (error) {
       return false;
@@ -111,18 +150,54 @@ function App() {
   const isInternetConnected = () => {
     return navigator.onLine;
   };
-  
-  /*
-  useEffect(() => {
-    const syncOfflineTasks = async () => {
-      const isServerUp = await isServerReachable();
-      const isInternetUp = isInternetConnected();
 
-      if (isServerUp && isInternetUp) {
-        const storedTasks = localStorage.getItem('offlineTasks');
-        if (storedTasks) {
-          const offlineTasks = JSON.parse(storedTasks);
-          for (const task of offlineTasks) {
+  /*const syncOfflineTasks = async () => {
+    const isServerUp = await isServerReachable();
+    const isInternetUp = isInternetConnected();
+
+    if (isServerUp && isInternetUp) {
+      const storedTasks = localStorage.getItem('offlineTasks');
+      if (storedTasks) {
+        const offlineTasks = JSON.parse(storedTasks);
+        for (const task of offlineTasks) {
+          try {
+            const response = await fetch('http://localhost:8080/api/tasks', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                taskName: task.taskName,
+                completed: task.completed
+              })
+            });
+
+            if (response.status === 201) {
+              const newTaskWithId = await response.json();
+              const updatedTasks = todoList.map(t => t.id === task.id ? newTaskWithId : t);
+              setTodoList(updatedTasks);
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        }
+        localStorage.removeItem('offlineTasks');
+      }
+    }
+  };*/
+
+  const syncOfflineTasks = async () => {
+    const isServerUp = await isServerReachable();
+    const isInternetUp = isInternetConnected();
+  
+    if (isServerUp && isInternetUp) {
+      const storedTasks = localStorage.getItem('offlineTasks');
+      if (storedTasks) {
+        const offlineTasks = JSON.parse(storedTasks);
+        const updatedTasks = [];
+        for (const task of offlineTasks) {
+          // Check if the task ID already exists in todoList
+          if (!todoList.some(t => t.id === task.id)) {
             try {
               const response = await fetch('http://localhost:8080/api/tasks', {
                 method: 'POST',
@@ -134,23 +209,28 @@ function App() {
                   completed: task.completed
                 })
               });
-
+  
               if (response.status === 201) {
                 const newTaskWithId = await response.json();
-                const updatedTasks = todoList.map(t => t.id === task.id ? newTaskWithId : t);
-                setTodoList(updatedTasks);
+                if (!todoList.some(t => t.id === newTaskWithId.id)) {
+                  updatedTasks.push(newTaskWithId);
+                }
               }
             } catch (error) {
               console.error(error);
             }
           }
-          localStorage.removeItem('offlineTasks');
         }
+        setTodoList(prevTodoList => [...prevTodoList, ...updatedTasks]);
+        localStorage.removeItem('offlineTasks');
       }
-    };
+    }
+  };
+  
 
+  useEffect(() => {
     syncOfflineTasks();
-  }, []);*/
+  }, []);
 
   // delete data and update database
   const deleteTask = async (id) => {
