@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Task } from './Task.js';
 
 function App() {
@@ -7,13 +7,36 @@ function App() {
   const [sortOrder, setSortOrder] = useState('ASC');
   const [todoList, setTodoList] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [newUser, setNewUser] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
   const [editMode, setEditMode] = useState(null);
   const [message, setMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [hasMore, setHasMore] = useState(true);
+  const loader = useRef(null);
+
+  useEffect(() => {
+    const storedSelectedUserId = localStorage.getItem('selectedUser');
+    if (storedSelectedUserId) {
+      setSelectedUser(storedSelectedUserId);
+    }
+  }, []);
+
 
   useEffect(() => {
     fetchTasks();
-  }, [sortBy, sortOrder]);
+    fetchUsers();
+  }, [sortBy, sortOrder, page, pageSize]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleObserver, { threshold: 1 });
+    if (loader.current) {
+      observer.observe(loader.current);
+    }
+  }, []);
 
   useEffect(() => {
     const storedTasks = localStorage.getItem('offlineTasks');
@@ -22,26 +45,68 @@ function App() {
     }
   }, []);
 
+  const handleObserver = (entities) => {
+    const target = entities[0];
+    if (target.isIntersecting && hasMore) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  };
+
   const handleChange = (event) => {
     setNewTask(event.target.value);
   }
+
+  const handleChangeUser = (event) => {
+    setNewUser(event.target.value);
+  };
 
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
     setSortBy('taskName');
   };
 
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
+  const renderPaginationControls = () => {
+    const totalPages = Math.ceil(todoList.length / pageSize);
+    return (
+      <div className="pagination-controls">
+        {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNo) => (
+          <button key={pageNo} onClick={() => handlePageChange(pageNo)}>{pageNo}</button>
+        ))}
+      </div>
+    );
+  };
+
+  // Fetch users from the server
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error(error);
+      setErrorMessage('Failed to fetch users. Please try again.');
+    }
+  };
+
   // fetch data from server
   const fetchTasks = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/tasks${sortBy ? `?sortBy=${sortBy}&sortOrder=${sortOrder}` : ''}`);
+      const response = await fetch(`http://localhost:8080/api/tasks?page=${page}&pageSize=${pageSize}${sortBy ? `&sortBy=${sortBy}&sortOrder=${sortOrder}` : ''}`);
       if(!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
 
       const data = await response.json();
       const tasksWithIds = data.map((task, index) => ({...task, id:task.id || index}))
-      setTodoList(tasksWithIds);
+      setTodoList((prevTodoList) => [...prevTodoList, ...tasksWithIds]);
+      setHasMore(data.length > 0);
     } catch (error) {
       console.error(error);
       setErrorMessage('Failed to fetch tasks. Please try again.');
@@ -54,53 +119,6 @@ function App() {
 
   // add data and send data to server
   /*const addTask = async () => {
-    if (newTask.trim() === '') return;
-
-    try {
-      const response = await fetch('http://localhost:8080/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskName: newTask,
-          completed: false
-        })
-      });
-
-      if (response.status === 201) {
-        const newTaskWithId = await response.json();
-        setTodoList([...todoList, newTaskWithId]);
-        setMessage('Task added successfully.');
-      } else {
-        const temporaryId = generateTemporaryId();
-        const taskToAdd = { taskName: newTask, completed: false, id: temporaryId };
-
-        setTodoList([...todoList, taskToAdd]);
-
-        const storedTasks = localStorage.getItem('offlineTasks');
-        const tasks = storedTasks ? JSON.parse(storedTasks) : [];
-        localStorage.setItem('offlineTasks', JSON.stringify([...tasks, taskToAdd]));
-
-        setMessage('Task added offline. Your new data will be synced when the network is available again');
-      }
-    } catch (error) {
-      console.error(error);
-
-      const temporaryId = generateTemporaryId();
-      const taskToAdd = { taskName: newTask, completed: false, id: temporaryId };
-
-      setTodoList([...todoList, taskToAdd]);
-
-      const storedTasks = localStorage.getItem('offlineTasks');
-      const tasks = storedTasks ? JSON.parse(storedTasks) : [];
-      localStorage.setItem('offlineTasks', JSON.stringify([...tasks, taskToAdd]));
-
-      setErrorMessage('Failed to add task. Please try again.');
-    }
-  };*/
-
-  const addTask = async () => {
     if (newTask.trim() === '') return;
   
     try {
@@ -135,6 +153,71 @@ function App() {
   
       setErrorMessage('Failed to add task. Please try again.');
     }
+  };*/
+
+  const addTask = async () => {
+    if (newTask.trim() === '' || !selectedUser) return;
+  
+    try {
+      const response = await fetch('http://localhost:8080/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskName: newTask,
+          userId: selectedUser.id,
+          completed: false
+        })
+      });
+  
+      if (response.status === 201) {
+        const newTaskWithId = await response.json();
+        setTodoList([...todoList, newTaskWithId]);
+        setMessage('Task added successfully.');
+      } else {
+        setErrorMessage('Failed to add task. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      const temporaryId = generateTemporaryId();
+      const taskToAdd = { taskName: newTask, completed: false, id: temporaryId };
+  
+      setTodoList([...todoList, taskToAdd]);
+  
+      const storedTasks = localStorage.getItem('offlineTasks');
+      const tasks = storedTasks ? JSON.parse(storedTasks) : [];
+      localStorage.setItem('offlineTasks', JSON.stringify([...tasks, taskToAdd]));
+  
+      setErrorMessage('Failed to add task. Please try again.');
+    }
+  };
+
+  const addUser = async () => {
+    if (newUser.trim() === '') return;
+
+    try {
+      const response = await fetch('http://localhost:8080/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userName: newUser
+        })
+      });
+
+      if (response.status === 201) {
+        const newUser = await response.json();
+        setUsers([...users, newUser]);
+        setMessage('User added successfully.');
+      } else {
+        setErrorMessage('Failed to add user. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage('Failed to add user. Please try again.');
+    }
   };
   
 
@@ -150,41 +233,6 @@ function App() {
   const isInternetConnected = () => {
     return navigator.onLine;
   };
-
-  /*const syncOfflineTasks = async () => {
-    const isServerUp = await isServerReachable();
-    const isInternetUp = isInternetConnected();
-
-    if (isServerUp && isInternetUp) {
-      const storedTasks = localStorage.getItem('offlineTasks');
-      if (storedTasks) {
-        const offlineTasks = JSON.parse(storedTasks);
-        for (const task of offlineTasks) {
-          try {
-            const response = await fetch('http://localhost:8080/api/tasks', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                taskName: task.taskName,
-                completed: task.completed
-              })
-            });
-
-            if (response.status === 201) {
-              const newTaskWithId = await response.json();
-              const updatedTasks = todoList.map(t => t.id === task.id ? newTaskWithId : t);
-              setTodoList(updatedTasks);
-            }
-          } catch (error) {
-            console.error(error);
-          }
-        }
-        localStorage.removeItem('offlineTasks');
-      }
-    }
-  };*/
 
   const syncOfflineTasks = async () => {
     const isServerUp = await isServerReachable();
@@ -320,6 +368,12 @@ function App() {
     setErrorMessage(null);
   };
 
+  // Update selected user and store it in local storage
+  const handleSelectedUserChange = (taskId, userId) => {
+    setSelectedUser(userId);
+    localStorage.setItem('selectedUser', userId);
+  };
+
   return (
     <div className="App">
       {message && (
@@ -342,10 +396,20 @@ function App() {
           Add Task
         </button>
       </div>
+
+      <div className="addUser">
+        <input value={newUser} onChange={handleChangeUser}></input>
+        <button onClick={addUser} className="addUser-button">
+          Add User
+        </button>
+      </div>
+
       <div className="list">
           <button onClick={toggleSortOrder}       className="toggle-sort-button">
             Toggle Sort Order
           </button>
+
+          {renderPaginationControls()}
         {
           todoList.map((task) => (
             <Task
@@ -356,9 +420,13 @@ function App() {
               updateTaskName={updateTaskName}
               handleEditTask={handleEditTask}
               updateTemporaryTaskName={updateTemporaryTaskName}
+              users={users}
+              selectedUser={selectedUser}
+              setSelectedUser={handleSelectedUserChange}
             />
           ))
         }
+        <div ref={loader}></div>
       </div>
     </div>
   );
