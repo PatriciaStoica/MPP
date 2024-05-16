@@ -10,14 +10,14 @@ public class Task {
     @Column(name = "taskName")
     private String taskName;
 
-    private boolean completed;
+    @Column(name = "userId")
+    private Long userId;
 
     public Task() {
     }
 
-    public Task(String taskName, boolean completed){
+    public Task(String taskName){
         this.taskName = taskName;
-        this.completed = completed;
     }
 
     public long getId() {
@@ -35,12 +35,11 @@ public class Task {
     public void setTaskName(String taskName) {
         this.taskName = taskName;
     }
-
-    public boolean isCompleted() {
-        return completed;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setCompleted(boolean completed) {
-        this.completed = completed;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }
